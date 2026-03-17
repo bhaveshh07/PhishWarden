@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmallBiz Corp — Employee Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background:#f1f5f9; font-family:'Segoe UI',sans-serif; }
+    .navbar { background:#1A2B4A; padding:.8rem 1.5rem; }
+    .navbar-brand { color:#fff!important; font-weight:700; font-size:1.1rem; }
+    .nav-user { color:rgba(255,255,255,.75); font-size:.88rem; display:flex; align-items:center; gap:.5rem; }
+    .sidebar { width:220px; background:#fff; border-right:1px solid #e2e8f0; min-height:calc(100vh - 56px); padding:1rem 0; }
+    .sidebar-item { padding:.6rem 1.2rem; cursor:pointer; display:flex; align-items:center; gap:.7rem; font-size:.9rem; color:#475569; border-radius:6px; margin:.1rem .5rem; transition:background .15s,color .15s; }
+    .sidebar-item:hover,.sidebar-item.active { background:#f0f4ff; color:#1A2B4A; }
+    .sidebar-item i { width:16px; text-align:center; font-size:.85rem; }
+    .sidebar-section { font-size:.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:.05em; padding:.8rem 1.2rem .3rem; }
+    .main { flex:1; padding:1.5rem; }
+    .page { display:none; } .page.active { display:block; }
+    .card-custom { background:#fff; border-radius:12px; border:1px solid #e2e8f0; padding:1.2rem; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+    .page-title { font-size:1.25rem; font-weight:700; color:#0f172a; margin-bottom:.2rem; }
+    .page-sub { color:#64748b; font-size:.85rem; margin-bottom:1.2rem; }
+    /* Files grid */
+    .file-card { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:1rem; cursor:pointer; transition:all .2s; }
+    .file-card:hover { border-color:#1A2B4A; box-shadow:0 4px 12px rgba(26,43,74,.1); transform:translateY(-2px); }
+    .file-icon { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin-bottom:.7rem; }
+    .file-name { font-weight:600; font-size:.9rem; color:#1e293b; margin-bottom:.2rem; }
+    .file-meta { font-size:.78rem; color:#94a3b8; }
+    .file-badge { display:inline-block; padding:.15rem .5rem; border-radius:4px; font-size:.7rem; font-weight:600; margin-top:.4rem; }
+    /* Finance table */
+    .finance-table th { background:#f8fafc; font-size:.8rem; color:#64748b; font-weight:600; }
+    .finance-table td { font-size:.88rem; }
+    /* Admin panel */
+    .admin-action { background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:1rem 1.2rem; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:all .2s; }
+    .admin-action:hover { border-color:#ef4444; background:#fef2f2; }
+    .admin-action-left { display:flex; align-items:center; gap:.8rem; }
+    .admin-icon { width:38px; height:38px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+    .action-label { font-weight:600; font-size:.9rem; color:#1e293b; }
+    .action-desc { font-size:.78rem; color:#64748b; }
+    .btn-action { background:#1A2B4A; color:#fff; border:none; border-radius:7px; padding:.4rem .9rem; font-size:.82rem; font-weight:600; cursor:pointer; transition:background .2s; }
+    .btn-action:hover { background:#243d6b; }
+    .btn-danger-action { background:#ef4444; }
+    .btn-danger-action:hover { background:#dc2626; }
+    /* Credentials panel */
+    .cred-row { background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:.7rem 1rem; display:flex; align-items:center; justify-content:space-between; }
+    .cred-email { font-size:.88rem; color:#1e293b; font-weight:500; }
+    .cred-pass { font-size:.82rem; color:#94a3b8; font-family:monospace; }
+    /* Toast */
+    .toast-container { position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999; }
+    .toast-msg { background:#1A2B4A; color:#fff; border-radius:10px; padding:.8rem 1.2rem; margin-top:.5rem; font-size:.88rem; display:flex; align-items:center; gap:.6rem; animation:slideUp .3s ease; min-width:260px; }
+    .toast-msg.success { background:#16a34a; }
+    .toast-msg.warn { background:#d97706; }
+    @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    /* Modal overlay */
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:8000;display:none;align-items:center;justify-content:center; }
+    .modal-overlay.show { display:flex; }
+    .modal-box { background:#fff;border-radius:16px;padding:1.8rem;max-width:440px;width:90%;box-shadow:0 20px 50px rgba(0,0,0,.25); }
+    .modal-title { font-weight:700;font-size:1.1rem;color:#0f172a;margin-bottom:.5rem; }
+    .modal-body-text { color:#64748b;font-size:.88rem;margin-bottom:1.2rem; }
+    .modal-actions { display:flex;gap:.7rem;justify-content:flex-end; }
+    .btn-cancel { background:#f1f5f9;border:none;color:#475569;border-radius:7px;padding:.5rem 1rem;font-size:.88rem;cursor:pointer; }
+    .btn-confirm { background:#ef4444;border:none;color:#fff;border-radius:7px;padding:.5rem 1rem;font-size:.88rem;font-weight:600;cursor:pointer; }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar d-flex align-items-center justify-content-between">
+  <div class="navbar-brand"><i class="fas fa-shield-alt me-2"></i>SmallBiz Corp</div>
+  <div class="nav-user">
+    <i class="fas fa-circle" style="color:#22c55e;font-size:.5rem;"></i>
+    <span id="nav-user-name">Employee</span>
+    <span style="color:rgba(255,255,255,.3)">|</span>
+    <a href="#" onclick="logout()" style="color:rgba(255,255,255,.65);font-size:.82rem;text-decoration:none;">
+      <i class="fas fa-sign-out-alt me-1"></i>Sign out
+    </a>
+  </div>
+</nav>
+
+<div class="d-flex">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">Workspace</div>
+    <div class="sidebar-item active" onclick="showPage('files',this)">
+      <i class="fas fa-folder"></i> My Files
+    </div>
+    <div class="sidebar-item" onclick="showPage('finance',this)">
+      <i class="fas fa-chart-line"></i> Finance
+    </div>
+
+    <!-- Admin-only section — shown to honey sessions -->
+    <div id="admin-section" style="display:none;">
+      <div class="sidebar-section">Admin</div>
+      <div class="sidebar-item" onclick="showPage('admin',this)">
+        <i class="fas fa-cog"></i> Admin Controls
+      </div>
+      <div class="sidebar-item" onclick="showPage('credentials',this)">
+        <i class="fas fa-key"></i> Credentials
+      </div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+
+    <!-- ══ PAGE: Files ══════════════════════════════════════════ -->
+    <div id="page-files" class="page active">
+      <div class="page-title">My Files</div>
+      <div class="page-sub">Your documents and shared resources</div>
+      <div id="files-grid" class="row g-3"></div>
+    </div>
+
+    <!-- ══ PAGE: Finance ════════════════════════════════════════ -->
+    <div id="page-finance" class="page">
+      <div class="page-title">Finance Overview</div>
+      <div class="page-sub">Q4 2024 — SmallBiz Corp Financial Summary</div>
+
+      <!-- KPI cards -->
+      <div class="row g-3 mb-3">
+        <div class="col-md-3">
+          <div class="card-custom text-center">
+            <div style="font-size:.78rem;color:#64748b;margin-bottom:.3rem;">Total Revenue</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#16a34a;">$2,847,320</div>
+            <div style="font-size:.75rem;color:#22c55e;"><i class="fas fa-arrow-up"></i> +12.4% YoY</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card-custom text-center">
+            <div style="font-size:.78rem;color:#64748b;margin-bottom:.3rem;">Operating Costs</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#ef4444;">$1,923,140</div>
+            <div style="font-size:.75rem;color:#f97316;"><i class="fas fa-arrow-up"></i> +3.1% YoY</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card-custom text-center">
+            <div style="font-size:.78rem;color:#64748b;margin-bottom:.3rem;">Net Profit</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#1A2B4A;">$924,180</div>
+            <div style="font-size:.75rem;color:#22c55e;"><i class="fas fa-arrow-up"></i> +28.7% YoY</div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card-custom text-center">
+            <div style="font-size:.78rem;color:#64748b;margin-bottom:.3rem;">Payroll (Monthly)</div>
+            <div style="font-size:1.5rem;font-weight:700;color:#7c3aed;">$312,500</div>
+            <div style="font-size:.75rem;color:#94a3b8;">15 employees</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transactions table -->
+      <div class="card-custom">
+        <div style="font-weight:600;font-size:.95rem;color:#1e293b;margin-bottom:.8rem;">Recent Transactions</div>
+        <table class="table table-sm finance-table mb-0">
+          <thead><tr><th>Date</th><th>Description</th><th>Amount</th><th>Account</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>2024-11-13</td><td>AWS Infrastructure</td><td class="text-danger">-$14,320</td><td>Corp Card ••4821</td><td><span class="badge bg-success">Cleared</span></td></tr>
+            <tr><td>2024-11-12</td><td>Client Payment — Acme Corp</td><td class="text-success">+$87,500</td><td>Business Checking</td><td><span class="badge bg-success">Cleared</span></td></tr>
+            <tr><td>2024-11-11</td><td>Payroll Run — November</td><td class="text-danger">-$312,500</td><td>Payroll Account</td><td><span class="badge bg-success">Cleared</span></td></tr>
+            <tr><td>2024-11-10</td><td>Office Lease Q4</td><td class="text-danger">-$42,000</td><td>Corp Card ••4821</td><td><span class="badge bg-success">Cleared</span></td></tr>
+            <tr><td>2024-11-09</td><td>Client Payment — TechStart</td><td class="text-success">+$124,000</td><td>Business Checking</td><td><span class="badge bg-warning text-dark">Pending</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: Admin Controls (TRAP) ═════════════════════════ -->
+    <div id="page-admin" class="page">
+      <div class="page-title">Admin Controls</div>
+      <div class="page-sub">System administration — restricted access</div>
+      <div class="d-flex flex-column gap-3">
+
+        <div class="admin-action" onclick="triggerEscalation('reset_passwords')">
+          <div class="admin-action-left">
+            <div class="admin-icon" style="background:#fef2f2;"><i class="fas fa-key" style="color:#ef4444;"></i></div>
+            <div>
+              <div class="action-label">Reset All Passwords</div>
+              <div class="action-desc">Force password reset for all 15 employee accounts</div>
+            </div>
+          </div>
+          <button class="btn-action btn-danger-action">Execute</button>
+        </div>
+
+        <div class="admin-action" onclick="triggerEscalation('export_database')">
+          <div class="admin-action-left">
+            <div class="admin-icon" style="background:#fffbeb;"><i class="fas fa-database" style="color:#d97706;"></i></div>
+            <div>
+              <div class="action-label">Export Full Database</div>
+              <div class="action-desc">Download complete MySQL dump — users, transactions, credentials</div>
+            </div>
+          </div>
+          <button class="btn-action">Export</button>
+        </div>
+
+        <div class="admin-action" onclick="triggerEscalation('admin_controls')">
+          <div class="admin-action-left">
+            <div class="admin-icon" style="background:#eff6ff;"><i class="fas fa-user-shield" style="color:#1d4ed8;"></i></div>
+            <div>
+              <div class="action-label">Elevate Session Privileges</div>
+              <div class="action-desc">Grant root access to current session</div>
+            </div>
+          </div>
+          <button class="btn-action">Elevate</button>
+        </div>
+
+        <div class="admin-action" onclick="triggerEscalation('view_credentials')">
+          <div class="admin-action-left">
+            <div class="admin-icon" style="background:#f5f3ff;"><i class="fas fa-lock-open" style="color:#7c3aed;"></i></div>
+            <div>
+              <div class="action-label">View Plaintext Credentials</div>
+              <div class="action-desc">Access unencrypted employee credential vault</div>
+            </div>
+          </div>
+          <button class="btn-action">Access</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══ PAGE: Credentials (TRAP) ════════════════════════════ -->
+    <div id="page-credentials" class="page">
+      <div class="page-title">Credential Vault</div>
+      <div class="page-sub">Employee login credentials — confidential</div>
+      <div id="cred-loading" class="text-center py-4" style="color:#94a3b8;">
+        <i class="fas fa-spinner fa-spin me-2"></i>Loading vault...
+      </div>
+      <div id="cred-list" class="d-flex flex-column gap-2" style="display:none!important;"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Confirm modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-title">Confirm Action</div>
+    <div class="modal-body-text" id="modal-body">Are you sure?</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" id="modal-confirm-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '/api';
+const token   = localStorage.getItem('pw_token');
+const isHoney = token ? JSON.parse(atob(token.split('.')[1])).isHoney : false;
+const name    = localStorage.getItem('pw_name') || 'Employee';
+
+if (!token) window.location.href = '/pages/login.html';
+
+document.getElementById('nav-user-name').textContent = name;
+
+// Show admin sidebar items only for honey sessions
+if (isHoney) {
+  document.getElementById('admin-section').style.display = 'block';
+}
+
+// ── Page switching ──────────────────────────────────────────────
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+
+  // Adaptive: trigger escalation silently when credentials page viewed
+  if (name === 'credentials') loadCredentials();
+}
+
+// ── Load files ─────────────────────────────────────────────────
+async function loadFiles() {
+  try {
+    const res  = await fetch(`${API}/files`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) { logout(); return; }
+    const files = await res.json();
+    renderFiles(files);
+  } catch (e) {
+    console.error('Files error:', e);
+  }
+}
+
+function renderFiles(files) {
+  const iconMap = {
+    xlsx: { icon: 'fa-file-excel',  color: '#16a34a', bg: '#f0fdf4', label: 'Excel',  badgeBg: '#dcfce7', badgeColor: '#15803d' },
+    txt:  { icon: 'fa-file-lines',  color: '#1d4ed8', bg: '#eff6ff', label: 'Text',   badgeBg: '#dbeafe', badgeColor: '#1d4ed8' },
+    pdf:  { icon: 'fa-file-pdf',    color: '#dc2626', bg: '#fef2f2', label: 'PDF',    badgeBg: '#fee2e2', badgeColor: '#dc2626' },
+    docx: { icon: 'fa-file-word',   color: '#2563eb', bg: '#eff6ff', label: 'Word',   badgeBg: '#dbeafe', badgeColor: '#1d4ed8' },
+  };
+  const sizes = ['24 KB','48 KB','112 KB','67 KB','89 KB','34 KB'];
+  const dates = ['Nov 12, 2024','Nov 10, 2024','Nov 8, 2024','Oct 30, 2024','Nov 1, 2024','Nov 5, 2024'];
+
+  const grid = document.getElementById('files-grid');
+  grid.innerHTML = files.map((f, i) => {
+    const ext = f.filename.split('.').pop();
+    const ic  = iconMap[ext] || iconMap.txt;
+    return `
+      <div class="col-md-3 col-sm-6">
+        <div class="file-card" onclick="downloadFile('${f.id}','${f.filename}','${f.canaryToken||''}')">
+          <div class="file-icon" style="background:${ic.bg};">
+            <i class="fas ${ic.icon}" style="color:${ic.color};font-size:1.3rem;"></i>
+          </div>
+          <div class="file-name">${f.filename}</div>
+          <div class="file-meta">${sizes[i % sizes.length]} · ${dates[i % dates.length]}</div>
+          <span class="file-badge" style="background:${ic.badgeBg};color:${ic.badgeColor};">${ic.label}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Download + canary ───────────────────────────────────────────
+async function downloadFile(id, filename, canaryToken) {
+  try {
+    const res = await fetch(`${API}/files/${id}/download`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    if (canaryToken) {
+      fetch(`${API}/canary/ping?token=${canaryToken}`, { method: 'GET' }).catch(() => {});
+    }
+    showToast('success', `<i class="fas fa-download"></i> Downloading ${filename}`);
+  } catch (e) { console.error(e); }
+}
+
+// ── Privilege escalation trap ───────────────────────────────────
+let pendingAction = null;
+
+function triggerEscalation(action) {
+  const labels = {
+    reset_passwords:  { title: 'Reset All Passwords?', body: 'This will send password reset emails to all 15 employees. This action is logged.' },
+    export_database:  { title: 'Export Full Database?', body: 'This will generate a complete database dump including user credentials and transactions.' },
+    admin_controls:   { title: 'Elevate Privileges?',   body: 'This will grant root-level access to your current session.' },
+    view_credentials: { title: 'Access Credential Vault?', body: 'This will load plaintext passwords for all employee accounts.' },
+  };
+  const l = labels[action];
+  pendingAction = action;
+  document.getElementById('modal-title').textContent = l.title;
+  document.getElementById('modal-body').textContent  = l.body;
+  document.getElementById('modal-confirm-btn').onclick = () => confirmEscalation(action);
+  document.getElementById('confirm-modal').classList.add('show');
+}
+
+async function confirmEscalation(action) {
+  closeModal();
+  showToast('warn', '<i class="fas fa-spinner fa-spin"></i> Processing...');
+
+  try {
+    const res  = await fetch(`${API}/honey/escalation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ action })
+    });
+    const data = await res.json();
+    setTimeout(() => showToast('success', `<i class="fas fa-check-circle"></i> ${data.message}`), 1000);
+  } catch (e) {
+    showToast('warn', '<i class="fas fa-exclamation-circle"></i> Request failed. Try again.');
+  }
+}
+
+function closeModal() {
+  document.getElementById('confirm-modal').classList.remove('show');
+}
+
+// ── Adaptive: Credentials page ──────────────────────────────────
+async function loadCredentials() {
+  // Silently fire escalation alert
+  fetch(`${API}/honey/escalation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body: JSON.stringify({ action: 'view_credentials' })
+  }).catch(() => {});
+
+  // Simulate loading then show fake credentials
+  const loading = document.getElementById('cred-loading');
+  const list    = document.getElementById('cred-list');
+  loading.style.display = 'block';
+  list.style.display = 'none';
+
+  const fakeCreds = [
+    { email: 'alice@smallbiz.com',   pass: 'P@ssw0rd_2024!' },
+    { email: 'bob@smallbiz.com',     pass: 'B0b$ecure#99' },
+    { email: 'carol@smallbiz.com',   pass: 'Car0l_Admin24' },
+    { email: 'david@smallbiz.com',   pass: 'Dav!dCh3n2024' },
+    { email: 'emily@smallbiz.com',   pass: 'Em!lyR0ss_HR' },
+    { email: 'admin@smallbiz.com',   pass: 'Adm1n@Corp24!' },
+    { email: 'finance@smallbiz.com', pass: 'F!nanc3Lead99' },
+  ];
+
+  setTimeout(() => {
+    loading.style.display = 'none';
+    list.style.removeProperty('display');
+    list.innerHTML = fakeCreds.map(c => `
+      <div class="cred-row">
+        <div>
+          <div class="cred-email">${c.email}</div>
+          <div class="cred-pass">${c.pass}</div>
+        </div>
+        <button onclick="showToast('success','<i class=\\'fas fa-copy\\'></i> Copied!')" style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:.3rem .7rem;font-size:.78rem;color:#475569;cursor:pointer;">Copy</button>
+      </div>`).join('');
+  }, 1800);
+}
+
+// ── Toast ───────────────────────────────────────────────────────
+function showToast(type, html) {
+  const c = document.getElementById('toast-container');
+  const d = document.createElement('div');
+  d.className = `toast-msg ${type}`;
+  d.innerHTML = html;
+  c.appendChild(d);
+  setTimeout(() => d.remove(), 3500);
+}
+
+// ── Logout ──────────────────────────────────────────────────────
+function logout() {
+  localStorage.clear();
+  window.location.href = '/pages/login.html';
+}
+
+// ── Init ────────────────────────────────────────────────────────
+loadFiles();
+</script>
+</body>
+</html>

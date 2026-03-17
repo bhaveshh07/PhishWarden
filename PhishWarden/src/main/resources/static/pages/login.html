@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishWarden — Secure Login</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Segoe UI', system-ui, sans-serif; padding: 1rem;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px; pointer-events: none;
+    }
+    .card-wrap { width: 100%; max-width: 440px; background: #fff; border-radius: 20px; box-shadow: 0 24px 64px rgba(0,0,0,0.35); overflow: hidden; position: relative; }
+    .card-header-band { background: linear-gradient(90deg, #1A2B4A 0%, #243d6b 100%); padding: 1.8rem 2rem 1.4rem; text-align: center; position: relative; overflow: hidden; }
+    .card-header-band::after { content: ''; position: absolute; top: -40px; right: -40px; width: 120px; height: 120px; background: rgba(255,255,255,0.05); border-radius: 50%; }
+    .card-header-band::before { content: ''; position: absolute; bottom: -30px; left: -20px; width: 90px; height: 90px; background: rgba(255,255,255,0.04); border-radius: 50%; }
+    .brand-icon { width: 56px; height: 56px; background: rgba(255,255,255,0.12); border: 2px solid rgba(255,255,255,0.2); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.9rem; }
+    .brand-icon i { color: #fff; font-size: 1.5rem; }
+    .brand-name { color: #fff; font-size: 1.55rem; font-weight: 700; letter-spacing: -0.3px; }
+    .brand-tagline { color: rgba(255,255,255,0.6); font-size: 0.82rem; margin-top: 0.2rem; }
+    .step-dots { display: flex; justify-content: center; gap: 6px; margin-top: 1rem; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.25); transition: all 0.3s; }
+    .dot.active { width: 20px; border-radius: 3px; background: rgba(255,255,255,0.85); }
+    .card-body-area { padding: 1.8rem 2rem 2rem; }
+    .screen { display: none; }
+    .screen.active { display: block; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+    .screen-title { font-size: 1.15rem; font-weight: 700; color: #0f172a; margin-bottom: 0.25rem; }
+    .screen-sub { font-size: 0.83rem; color: #64748b; margin-bottom: 1.3rem; }
+    .sec-badge { display: flex; align-items: center; gap: 0.5rem; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.45rem 0.8rem; margin-bottom: 1.3rem; }
+    .sec-badge i { color: #16a34a; font-size: 0.8rem; }
+    .sec-badge span { color: #15803d; font-size: 0.78rem; font-weight: 500; }
+    .field-group { margin-bottom: 1.1rem; }
+    .field-label { display: block; font-weight: 600; color: #1e293b; font-size: 0.87rem; margin-bottom: 0.4rem; }
+    .field-wrap { position: relative; }
+    .field-input { width: 100%; padding: 0.7rem 1rem; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; color: #0f172a; background: #fafbfc; outline: none; transition: border-color 0.2s, box-shadow 0.2s, background 0.2s; }
+    .field-input:focus { border-color: #1A2B4A; background: #fff; box-shadow: 0 0 0 3px rgba(26,43,74,0.1); }
+    .field-input.has-icon { padding-right: 2.8rem; }
+    .field-icon { position: absolute; right: 0.9rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.95rem; cursor: pointer; transition: color 0.2s; }
+    .field-icon:hover { color: #1A2B4A; }
+    .alert-custom { display: none; align-items: center; gap: 0.5rem; padding: 0.6rem 0.9rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1rem; }
+    .alert-custom.show { display: flex; }
+    .alert-danger-custom { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+    .alert-warning-custom { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+    .btn-primary-custom { width: 100%; padding: 0.75rem; background: #1A2B4A; color: #fff; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+    .btn-primary-custom:hover { background: #243d6b; }
+    .btn-primary-custom:active { transform: scale(0.99); }
+    .btn-primary-custom:disabled { background: #94a3b8; cursor: not-allowed; }
+    .mfa-icon-wrap { width: 60px; height: 60px; background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #bfdbfe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+    .mfa-icon-wrap i { color: #1d4ed8; font-size: 1.5rem; }
+    .email-chip { display: flex; align-items: center; justify-content: center; gap: 0.4rem; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 20px; padding: 0.3rem 0.8rem; font-size: 0.82rem; color: #475569; margin: 0.5rem auto 1.2rem; max-width: fit-content; }
+    .email-chip i { color: #1A2B4A; font-size: 0.75rem; }
+    .email-chip strong { color: #1A2B4A; }
+    .expiry-bar-wrap { background: #f1f5f9; border-radius: 4px; height: 4px; margin-bottom: 1rem; overflow: hidden; }
+    .expiry-bar { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #16a34a, #22c55e); transition: width 1s linear, background 1s; }
+    .otp-row { display: flex; gap: 8px; justify-content: center; margin: 1rem 0 1.4rem; }
+    .otp-box { width: 50px; height: 58px; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 1.6rem; font-weight: 700; text-align: center; color: #1A2B4A; background: #fafbfc; outline: none; transition: border-color 0.2s, background 0.2s, transform 0.1s; }
+    .otp-box:focus { border-color: #1A2B4A; background: #fff; box-shadow: 0 0 0 3px rgba(26,43,74,0.1); transform: scale(1.05); }
+    .otp-box.filled { border-color: #1A2B4A; background: #f0f4ff; }
+    .otp-box.error { border-color: #ef4444; background: #fef2f2; animation: shake 0.3s; }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+    .resend-row { text-align: center; font-size: 0.83rem; color: #64748b; margin-top: 0.9rem; }
+    .resend-btn { background: none; border: none; color: #1A2B4A; font-weight: 600; cursor: pointer; text-decoration: underline; font-size: 0.83rem; padding: 0; }
+    .resend-btn:disabled { color: #94a3b8; cursor: default; text-decoration: none; }
+    .btn-ghost { background: none; border: 1.5px solid #e2e8f0; color: #64748b; border-radius: 8px; padding: 0.45rem 1rem; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 0.4rem; }
+    .btn-ghost:hover { border-color: #1A2B4A; color: #1A2B4A; }
+    .mfa-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; }
+    .trust-strip { background: #f8fafc; border-top: 1px solid #f1f5f9; padding: 0.6rem 2rem; display: flex; align-items: center; justify-content: center; gap: 1.2rem; }
+    .trust-item { display: flex; align-items: center; gap: 0.3rem; font-size: 0.73rem; color: #94a3b8; }
+    .trust-item i { font-size: 0.7rem; }
+  </style>
+</head>
+<body>
+<div class="card-wrap">
+  <div class="card-header-band">
+    <div class="brand-icon"><i class="fas fa-shield-alt"></i></div>
+    <div class="brand-name">PhishWarden</div>
+    <div class="brand-tagline">Secure Employee Portal</div>
+    <div class="step-dots">
+      <div class="dot active" id="dot-1"></div>
+      <div class="dot" id="dot-2"></div>
+    </div>
+  </div>
+
+  <div class="card-body-area">
+
+    <!-- SCREEN 1 — Login -->
+    <div id="screen-login" class="screen active">
+      <div class="screen-title">Welcome back</div>
+      <div class="screen-sub">Sign in to your account to continue</div>
+      <div class="sec-badge">
+        <i class="fas fa-lock"></i>
+        <span>All login activity is monitored and logged</span>
+      </div>
+      <div id="alert-box" class="alert-custom alert-danger-custom" role="alert">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="alert-text">Invalid credentials.</span>
+      </div>
+      <div id="lockout-box" class="alert-custom alert-warning-custom" role="alert">
+        <i class="fas fa-clock"></i>
+        <span id="lockout-text">Too many failed attempts.</span>
+        <span id="lockout-timer" style="font-weight:700; margin-left:4px;"></span>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="email"><i class="fas fa-envelope" style="margin-right:5px;color:#94a3b8;font-size:0.8rem;"></i>Email address</label>
+        <div class="field-wrap">
+          <input type="email" id="email" class="field-input" placeholder="you@company.com" autocomplete="email">
+        </div>
+      </div>
+      <div class="field-group" style="margin-bottom:1.4rem;">
+        <label class="field-label" for="password"><i class="fas fa-key" style="margin-right:5px;color:#94a3b8;font-size:0.8rem;"></i>Password</label>
+        <div class="field-wrap">
+          <input type="password" id="password" class="field-input has-icon" placeholder="Enter your password" autocomplete="current-password">
+          <span class="field-icon" id="pw-toggle" onclick="togglePw()" title="Show/hide password">
+            <i class="fas fa-eye" id="pw-eye"></i>
+          </span>
+        </div>
+      </div>
+      <button class="btn-primary-custom" id="btn-login" onclick="handleLogin()">
+        <i class="fas fa-arrow-right-to-bracket"></i>
+        <span id="btn-login-text">Sign In</span>
+        <span id="btn-login-spinner" class="spinner-border spinner-border-sm d-none"></span>
+      </button>
+    </div>
+
+    <!-- SCREEN 2 — MFA -->
+    <div id="screen-mfa" class="screen">
+      <div style="text-align:center;margin-bottom:1rem;">
+        <div class="mfa-icon-wrap"><i class="fas fa-envelope-open-text"></i></div>
+        <div class="screen-title">Verify it's you</div>
+        <div class="screen-sub" style="margin-bottom:0;">New device detected — check your email</div>
+      </div>
+      <div class="email-chip">
+        <i class="fas fa-paper-plane"></i>
+        Code sent to <strong id="mfa-email-display">your email</strong>
+      </div>
+      <div class="expiry-bar-wrap"><div class="expiry-bar" id="expiry-bar" style="width:100%;"></div></div>
+      <div id="mfa-alert" class="alert-custom alert-danger-custom" role="alert">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="mfa-alert-text">Invalid or expired code.</span>
+      </div>
+      <div class="otp-row">
+        <input class="otp-box" id="otp-0" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" id="otp-1" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" id="otp-2" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" id="otp-3" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" id="otp-4" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+        <input class="otp-box" id="otp-5" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+      </div>
+      <button class="btn-primary-custom" id="btn-verify" onclick="handleVerify()">
+        <i class="fas fa-check-circle"></i>
+        <span id="btn-verify-text">Verify Code</span>
+        <span id="btn-verify-spinner" class="spinner-border spinner-border-sm d-none"></span>
+      </button>
+      <div class="mfa-footer">
+        <button class="btn-ghost" onclick="backToLogin()"><i class="fas fa-arrow-left"></i> Back</button>
+        <div class="resend-row" style="margin:0;">
+          <button class="resend-btn" id="btn-resend" onclick="handleResend()" disabled>
+            Resend (<span id="resend-countdown">60</span>s)
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="trust-strip">
+    <div class="trust-item"><i class="fas fa-shield-halved"></i> End-to-end monitored</div>
+    <div class="trust-item"><i class="fas fa-user-shield"></i> Deception protected</div>
+    <div class="trust-item"><i class="fas fa-clock-rotate-left"></i> All attempts logged</div>
+  </div>
+</div>
+
+<script>
+  const API = '/api';
+  let currentSessionToken = '', currentEmail = '', resendTimer = null, expiryTimer = null;
+  localStorage.clear();
+
+  function setStep(n) {
+    document.getElementById('dot-1').classList.toggle('active', n === 1);
+    document.getElementById('dot-2').classList.toggle('active', n === 2);
+  }
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    setStep(name === 'login' ? 1 : 2);
+  }
+  function backToLogin() {
+    clearInterval(resendTimer); clearInterval(expiryTimer);
+    showScreen('login'); hideAlert('mfa-alert'); clearOtpBoxes();
+  }
+  function togglePw() {
+    const inp = document.getElementById('password'), eye = document.getElementById('pw-eye');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    eye.className = inp.type === 'password' ? 'fas fa-eye' : 'fas fa-eye-slash';
+  }
+  async function handleLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    hideAlert('alert-box');
+    if (!email || !password) { showAlert('alert-box', 'alert-text', 'Please enter your email and password.'); return; }
+    setLoginLoading(true);
+    try {
+      const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const data = await res.json();
+      if (res.status === 429) { showLockout(data.lockoutSeconds); return; }
+      if (res.status === 202 && data.status === 'MFA_REQUIRED') {
+        currentSessionToken = data.sessionToken; currentEmail = email;
+        document.getElementById('mfa-email-display').textContent = email;
+        showScreen('mfa'); startResendCountdown(); startExpiryBar(600);
+        document.getElementById('otp-0').focus(); return;
+      }
+      if (!res.ok) { showAlert('alert-box', 'alert-text', data.error || 'Invalid credentials.'); return; }
+      finishLogin(data);
+    } catch (e) { showAlert('alert-box', 'alert-text', 'Connection error. Please try again.'); }
+    finally { setLoginLoading(false); }
+  }
+  async function handleVerify() {
+    const otp = getOtpValue(); hideAlert('mfa-alert');
+    if (otp.length < 6) { showAlert('mfa-alert', 'mfa-alert-text', 'Please enter the full 6-digit code.'); shakeBoxes(); return; }
+    setVerifyLoading(true);
+    try {
+      const res = await fetch(`${API}/auth/verify-mfa`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionToken: currentSessionToken, otp }) });
+      const data = await res.json();
+      if (res.status === 403 && data.blocked) {
+        // IP has been blocked — show hard stop, disable everything
+        clearInterval(resendTimer); clearInterval(expiryTimer);
+        document.getElementById('screen-mfa').innerHTML = `
+          <div style="text-align:center;padding:1rem 0;">
+            <div style="width:60px;height:60px;background:#fef2f2;border:2px solid #fecaca;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+              <i class="fas fa-ban" style="color:#dc2626;font-size:1.5rem;"></i>
+            </div>
+            <div style="font-size:1.1rem;font-weight:700;color:#b91c1c;margin-bottom:.5rem;">Access Blocked</div>
+            <div style="font-size:.85rem;color:#64748b;margin-bottom:1rem;">
+              Your IP has been blocked after too many failed verification attempts.<br>
+              Contact your system administrator to regain access.
+            </div>
+            <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:.6rem 1rem;font-size:.78rem;color:#b91c1c;">
+              <i class="fas fa-shield-alt me-1"></i> Security event logged and reported to SOC
+            </div>
+          </div>`;
+        return;
+      }
+      if (!res.ok) { showAlert('mfa-alert', 'mfa-alert-text', data.error || 'Invalid code. Please try again.'); shakeBoxes(); clearOtpBoxes(); document.getElementById('otp-0').focus(); return; }
+      clearInterval(resendTimer); clearInterval(expiryTimer); finishLogin(data);
+    } catch (e) { showAlert('mfa-alert', 'mfa-alert-text', 'Connection error. Please try again.'); }
+    finally { setVerifyLoading(false); }
+  }
+  async function handleResend() {
+    const res = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: currentEmail, password: document.getElementById('password').value }) });
+    const data = await res.json();
+    if (data.sessionToken) { currentSessionToken = data.sessionToken; clearOtpBoxes(); document.getElementById('otp-0').focus(); startResendCountdown(); startExpiryBar(600); }
+  }
+  function finishLogin(data) {
+    localStorage.setItem('pw_token', data.token); localStorage.setItem('pw_name', data.name); localStorage.setItem('pw_role', data.role);
+    window.location.href = data.role === 'ADMIN' ? '/pages/soc-dashboard.html' : '/pages/employee-dashboard.html';
+  }
+  function getOtpValue() { let v = ''; for (let i = 0; i < 6; i++) v += document.getElementById('otp-' + i).value; return v; }
+  function clearOtpBoxes() { for (let i = 0; i < 6; i++) { const b = document.getElementById('otp-' + i); b.value = ''; b.classList.remove('filled', 'error'); } }
+  function shakeBoxes() { for (let i = 0; i < 6; i++) { const b = document.getElementById('otp-' + i); b.classList.add('error'); setTimeout(() => b.classList.remove('error'), 400); } }
+  document.addEventListener('DOMContentLoaded', () => {
+    for (let i = 0; i < 6; i++) {
+      const box = document.getElementById('otp-' + i);
+      box.addEventListener('input', (e) => {
+        const v = e.target.value.replace(/\D/g, '');
+        if (v.length > 1) { const digits = v.slice(0, 6 - i); for (let j = 0; j < digits.length; j++) { const b = document.getElementById('otp-' + (i+j)); if (b) { b.value = digits[j]; b.classList.add('filled'); } } document.getElementById('otp-' + Math.min(i + digits.length, 5)).focus(); e.target.value = v[0]||''; return; }
+        e.target.value = v; e.target.classList.toggle('filled', v.length > 0);
+        if (v && i < 5) document.getElementById('otp-' + (i+1)).focus();
+      });
+      box.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && !box.value && i > 0) document.getElementById('otp-' + (i-1)).focus(); if (e.key === 'Enter') handleVerify(); });
+    }
+    document.getElementById('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') handleLogin(); });
+  });
+  function startResendCountdown() {
+    const btn = document.getElementById('btn-resend'); clearInterval(resendTimer); btn.disabled = true; let secs = 60;
+    btn.innerHTML = 'Resend (<span id="resend-countdown">' + secs + '</span>s)';
+    resendTimer = setInterval(() => { secs--; const el = document.getElementById('resend-countdown'); if (el) el.textContent = secs; if (secs <= 0) { clearInterval(resendTimer); btn.disabled = false; btn.textContent = 'Resend code'; } }, 1000);
+  }
+  function startExpiryBar(totalSecs) {
+    clearInterval(expiryTimer); const bar = document.getElementById('expiry-bar'); let remaining = totalSecs; bar.style.width = '100%'; bar.style.background = 'linear-gradient(90deg,#16a34a,#22c55e)';
+    expiryTimer = setInterval(() => { remaining--; const pct = (remaining / totalSecs) * 100; bar.style.width = pct + '%'; if (pct < 30) bar.style.background = 'linear-gradient(90deg,#dc2626,#ef4444)'; else if (pct < 60) bar.style.background = 'linear-gradient(90deg,#d97706,#f59e0b)'; if (remaining <= 0) clearInterval(expiryTimer); }, 1000);
+  }
+  function showLockout(seconds) {
+    const box = document.getElementById('lockout-box'), timer = document.getElementById('lockout-timer');
+    box.classList.add('show'); let s = seconds; timer.textContent = formatSecs(s);
+    const iv = setInterval(() => { s--; if (s <= 0) { clearInterval(iv); box.classList.remove('show'); } else timer.textContent = formatSecs(s); }, 1000);
+  }
+  function formatSecs(s) { return s >= 60 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`; }
+  function setLoginLoading(on) { document.getElementById('btn-login-text').textContent = on ? 'Signing in…' : 'Sign In'; document.getElementById('btn-login-spinner').classList.toggle('d-none', !on); document.getElementById('btn-login').disabled = on; }
+  function setVerifyLoading(on) { document.getElementById('btn-verify-text').textContent = on ? 'Verifying…' : 'Verify Code'; document.getElementById('btn-verify-spinner').classList.toggle('d-none', !on); document.getElementById('btn-verify').disabled = on; }
+  function showAlert(boxId, textId, msg) { document.getElementById(textId).textContent = msg; document.getElementById(boxId).classList.add('show'); }
+  function hideAlert(boxId) { document.getElementById(boxId).classList.remove('show'); }
+</script>
+</body>
+</html>

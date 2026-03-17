@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PhishWarden — SOC Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root { --bg:#0f172a; --surface:#1e293b; --surface2:#263348; --border:#334155; --text:#e2e8f0; --muted:#94a3b8; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Segoe UI',sans-serif; min-height:100vh; }
+    .topbar { background:var(--surface); border-bottom:1px solid var(--border); padding:.75rem 1.5rem; display:flex; align-items:center; justify-content:space-between; }
+    .topbar-brand { font-weight:700; font-size:1.05rem; display:flex; align-items:center; gap:.6rem; }
+    .topbar-brand i { color:#e84855; }
+    .topbar-right { display:flex; align-items:center; gap:1rem; }
+    .live-dot { width:8px; height:8px; background:#22c55e; border-radius:50%; animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .topbar-time { font-size:.8rem; color:var(--muted); }
+    .btn-logout { background:none; border:1px solid var(--border); color:var(--muted); border-radius:6px; padding:.3rem .7rem; font-size:.8rem; cursor:pointer; }
+    .btn-logout:hover { color:#fff; border-color:#fff; }
+
+    /* Stat cards */
+    .stat-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; padding:1rem 1.5rem 0; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:.9rem 1rem; }
+    .stat-label { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin-bottom:.3rem; }
+    .stat-val { font-size:1.6rem; font-weight:700; }
+    .stat-sub { font-size:.73rem; color:var(--muted); margin-top:.1rem; }
+
+    /* Tab nav */
+    .tab-nav { display:flex; gap:.3rem; padding:.8rem 1.5rem 0; border-bottom:1px solid var(--border); }
+    .tab-btn { background:none; border:none; color:var(--muted); padding:.5rem .9rem; font-size:.85rem; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .2s; }
+    .tab-btn.active { color:#fff; border-bottom-color:#e84855; }
+
+    .content-area { padding:1rem 1.5rem; }
+    .tab-pane { display:none; } .tab-pane.active { display:block; }
+
+    /* Threat events */
+    .event-row { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.8rem 1rem; margin-bottom:.5rem; display:flex; align-items:flex-start; gap:.8rem; }
+    .event-row:hover { border-color:#475569; }
+    .sev-badge { padding:.2rem .55rem; border-radius:4px; font-size:.68rem; font-weight:700; white-space:nowrap; }
+    .sev-CRITICAL { background:#450a0a; color:#fca5a5; }
+    .sev-HIGH     { background:#431407; color:#fdba74; }
+    .sev-MEDIUM   { background:#422006; color:#fde68a; }
+    .sev-LOW      { background:#0c1a35; color:#93c5fd; }
+    .event-type { font-size:.82rem; font-weight:600; color:#fff; }
+    .event-ip   { font-size:.78rem; color:#60a5fa; font-family:monospace; }
+    .event-desc { font-size:.78rem; color:var(--muted); margin-top:.15rem; }
+    .event-time { font-size:.72rem; color:var(--muted); white-space:nowrap; }
+    .btn-resolve { background:#1e3a5f; border:none; color:#93c5fd; border-radius:5px; padding:.25rem .6rem; font-size:.72rem; cursor:pointer; white-space:nowrap; }
+    .btn-resolve:hover { background:#1d4ed8; color:#fff; }
+    .btn-resolve.resolved { background:#14532d; color:#86efac; cursor:default; }
+
+    /* Threat score cards */
+    .score-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.2rem; margin-bottom:.6rem; }
+    .score-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:.6rem; }
+    .score-ip { font-family:monospace; font-size:.88rem; color:#60a5fa; }
+    .score-num { font-size:1.8rem; font-weight:700; }
+    .score-label { font-size:.8rem; margin-top:.1rem; }
+    .score-bar-wrap { background:var(--border); border-radius:4px; height:6px; margin:.6rem 0; overflow:hidden; }
+    .score-bar { height:100%; border-radius:4px; transition:width .5s; }
+    .score-breakdown { display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.5rem; }
+    .score-item { background:var(--surface2); border-radius:4px; padding:.2rem .5rem; font-size:.72rem; color:var(--muted); }
+    .score-item span { color:#fff; font-weight:600; }
+
+    /* Recommended actions */
+    .response-card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem 1.2rem; margin-bottom:.6rem; }
+    .response-header { display:flex; align-items:center; gap:.6rem; margin-bottom:.8rem; }
+    .response-header i { color:#e84855; }
+    .response-header .rh-title { font-weight:700; font-size:.95rem; }
+    .response-header .rh-sub { font-size:.78rem; color:var(--muted); }
+    .action-item { display:flex; align-items:center; justify-content:space-between; padding:.6rem .8rem; background:var(--surface2); border-radius:7px; margin-bottom:.4rem; }
+    .action-left { display:flex; align-items:center; gap:.7rem; }
+    .action-icon { width:32px; height:32px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:.85rem; }
+    .action-name { font-size:.85rem; font-weight:600; color:#fff; }
+    .action-sub  { font-size:.73rem; color:var(--muted); }
+    .btn-do { border:none; border-radius:5px; padding:.3rem .7rem; font-size:.75rem; font-weight:600; cursor:pointer; transition:all .2s; }
+    .btn-block    { background:#450a0a; color:#fca5a5; }
+    .btn-block:hover { background:#ef4444; color:#fff; }
+    .btn-reset    { background:#422006; color:#fdba74; }
+    .btn-reset:hover { background:#f97316; color:#fff; }
+    .btn-alert    { background:#1e3a5f; color:#93c5fd; }
+    .btn-alert:hover { background:#1d4ed8; color:#fff; }
+    .btn-lock     { background:#3b0764; color:#d8b4fe; }
+    .btn-lock:hover { background:#7c3aed; color:#fff; }
+    .btn-done { background:#14532d; color:#86efac; cursor:default!important; }
+
+    /* Timeline */
+    .timeline-wrap { position:relative; padding-left:2rem; }
+    .timeline-wrap::before { content:''; position:absolute; left:.7rem; top:0; bottom:0; width:2px; background:var(--border); }
+    .tl-step { position:relative; margin-bottom:1rem; }
+    .tl-dot { position:absolute; left:-1.65rem; top:.2rem; width:14px; height:14px; border-radius:50%; border:2px solid var(--bg); }
+    .tl-dot-CRITICAL { background:#ef4444; }
+    .tl-dot-HIGH     { background:#f97316; }
+    .tl-dot-MEDIUM   { background:#eab308; }
+    .tl-dot-LOW      { background:#3b82f6; }
+    .tl-time { font-size:.72rem; color:var(--muted); margin-bottom:.15rem; }
+    .tl-label { font-size:.88rem; font-weight:600; color:#fff; }
+    .tl-desc { font-size:.75rem; color:var(--muted); margin-top:.1rem; }
+    .tl-connector { font-size:.72rem; color:var(--muted); padding:.2rem 0 .2rem 0; display:flex; align-items:center; gap:.4rem; }
+    .tl-connector::before { content:'→'; color:#475569; }
+    .ip-select { background:var(--surface2); border:1px solid var(--border); color:#fff; border-radius:6px; padding:.4rem .7rem; font-size:.83rem; cursor:pointer; }
+    .ip-select option { background:var(--surface2); }
+
+    /* Canary pings */
+    .ping-row { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.7rem 1rem; margin-bottom:.4rem; display:flex; align-items:center; gap:.8rem; }
+    .ping-token { font-family:monospace; font-size:.75rem; color:#94a3b8; }
+    .ping-ip    { font-family:monospace; font-size:.82rem; color:#60a5fa; }
+    .ping-time  { font-size:.72rem; color:var(--muted); margin-left:auto; }
+
+    .empty-state { text-align:center; padding:3rem; color:var(--muted); }
+    .empty-state i { font-size:2rem; margin-bottom:.8rem; display:block; }
+  </style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <i class="fas fa-shield-alt"></i>
+    PhishWarden SOC
+    <span style="background:#450a0a;color:#fca5a5;font-size:.68rem;padding:.15rem .4rem;border-radius:4px;font-weight:600;" id="unresolved-badge">0 UNRESOLVED</span>
+  </div>
+  <div class="topbar-right">
+    <div class="live-dot"></div>
+    <span class="topbar-time" id="clock">--:--:--</span>
+    <button class="btn-logout" onclick="logout()"><i class="fas fa-sign-out-alt me-1"></i>Logout</button>
+  </div>
+</div>
+
+<!-- Stat cards -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <div class="stat-label">Total Threats</div>
+    <div class="stat-val" id="stat-total" style="color:#e84855;">0</div>
+    <div class="stat-sub">All time</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Critical Alerts</div>
+    <div class="stat-val" id="stat-critical" style="color:#fca5a5;">0</div>
+    <div class="stat-sub">Honeytokens + Escalation</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Canary Pings</div>
+    <div class="stat-val" id="stat-canary" style="color:#fdba74;">0</div>
+    <div class="stat-sub">File downloads by attacker</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Top Threat Score</div>
+    <div class="stat-val" id="stat-score" style="color:#c084fc;">0</div>
+    <div class="stat-sub" id="stat-score-label">No threats detected</div>
+  </div>
+</div>
+
+<!-- Tab nav -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('events',this)">Threat Events</button>
+  <button class="tab-btn" onclick="switchTab('scores',this)">Threat Intelligence</button>
+  <button class="tab-btn" onclick="switchTab('timeline',this)">Attack Timeline</button>
+  <button class="tab-btn" onclick="switchTab('response',this)">Response Engine</button>
+  <button class="tab-btn" onclick="switchTab('canary',this)">Canary Pings</button>
+</div>
+
+<div class="content-area">
+
+  <!-- ── Tab: Threat Events ───────────────────────────────────── -->
+  <div id="tab-events" class="tab-pane active">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:.8rem;">
+      <label style="font-size:.82rem;color:var(--muted);">Filter:</label>
+      <select id="filter-select" onchange="loadEvents()" style="background:var(--surface2);border:1px solid var(--border);color:#fff;border-radius:6px;padding:.3rem .6rem;font-size:.82rem;">
+        <option value="all">All Events</option>
+        <option value="unresolved">Unresolved Only</option>
+      </select>
+    </div>
+    <div id="events-list"><div class="empty-state"><i class="fas fa-shield-alt"></i>No events yet</div></div>
+  </div>
+
+  <!-- ── Tab: Threat Intelligence Scores ─────────────────────── -->
+  <div id="tab-scores" class="tab-pane">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;">
+      Dynamic threat score per attacker IP based on observed behaviour
+    </div>
+    <div id="scores-list"><div class="empty-state"><i class="fas fa-chart-bar"></i>No threat data yet</div></div>
+  </div>
+
+  <!-- ── Tab: Attack Timeline ─────────────────────────────────── -->
+  <div id="tab-timeline" class="tab-pane">
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;">
+      <label style="font-size:.82rem;color:var(--muted);">Attacker IP:</label>
+      <select class="ip-select" id="timeline-ip-select" onchange="loadTimeline()">
+        <option value="">— select an IP —</option>
+      </select>
+    </div>
+    <div id="timeline-content"><div class="empty-state"><i class="fas fa-sitemap"></i>Select an IP to view attack timeline</div></div>
+  </div>
+
+  <!-- ── Tab: Response Engine ─────────────────────────────────── -->
+  <div id="tab-response" class="tab-pane">
+    <div style="font-size:.82rem;color:var(--muted);margin-bottom:.8rem;">
+      Recommended actions based on detected threats — select an attacker IP
+    </div>
+    <div style="display:flex;align-items:center;gap:.7rem;margin-bottom:1rem;">
+      <label style="font-size:.82rem;color:var(--muted);">Target IP:</label>
+      <select class="ip-select" id="response-ip-select" onchange="loadResponse()">
+        <option value="">— select an IP —</option>
+      </select>
+    </div>
+    <div id="response-content"><div class="empty-state"><i class="fas fa-bolt"></i>Select an IP to see recommended actions</div></div>
+  </div>
+
+  <!-- ── Tab: Canary Pings ─────────────────────────────────────── -->
+  <div id="tab-canary" class="tab-pane">
+    <div id="canary-list"><div class="empty-state"><i class="fas fa-dove"></i>No canary pings yet</div></div>
+  </div>
+
+</div>
+
+<script>
+const API   = '/api';
+const token = localStorage.getItem('pw_token');
+if (!token) window.location.href = '/pages/login.html';
+
+const headers = { 'Authorization': 'Bearer ' + token };
+
+// ── Clock ─────────────────────────────────────────────────────
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('en-IN', { hour12: false });
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ── Tab switching ─────────────────────────────────────────────
+function switchTab(name, el) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+  if (name === 'scores')   loadScores();
+  if (name === 'timeline') loadTimelineIps();
+  if (name === 'response') loadResponseIps();
+  if (name === 'canary')   loadCanary();
+}
+
+// ── Load threat events ────────────────────────────────────────
+async function loadEvents() {
+  const filter = document.getElementById('filter-select').value;
+  const res  = await fetch(`${API}/soc/events?unresolvedOnly=${filter === 'unresolved'}`, { headers });
+  const data = await res.json();
+
+  const critical = data.filter(e => e.severity === 'CRITICAL').length;
+  const unresolved = data.filter(e => !e.isResolved).length;
+  document.getElementById('stat-total').textContent    = data.length;
+  document.getElementById('stat-critical').textContent = critical;
+  document.getElementById('unresolved-badge').textContent = unresolved + ' UNRESOLVED';
+
+  if (!data.length) {
+    document.getElementById('events-list').innerHTML =
+      '<div class="empty-state"><i class="fas fa-shield-alt"></i>No events</div>';
+    return;
+  }
+
+  document.getElementById('events-list').innerHTML = data.map(e => `
+    <div class="event-row" id="event-${e.id}">
+      <span class="sev-badge sev-${e.severity}">${e.severity}</span>
+      <div style="flex:1;min-width:0;">
+        <div class="event-type">${friendlyType(e.eventType)} <span class="event-ip">${e.attackerIp||'unknown'}</span></div>
+        <div class="event-desc">${e.description}</div>
+        <div class="event-time">${formatTime(e.occurredAt)}</div>
+      </div>
+      ${e.isResolved
+        ? `<button class="btn-resolve resolved" disabled><i class="fas fa-check me-1"></i>Resolved</button>`
+        : `<button class="btn-resolve" onclick="resolveEvent(${e.id})"><i class="fas fa-check me-1"></i>Resolve</button>`
+      }
+    </div>`).join('');
+}
+
+async function resolveEvent(id) {
+  await fetch(`${API}/soc/events/${id}/resolve`, { method: 'POST', headers });
+  loadEvents();
+}
+
+// ── Threat scores ─────────────────────────────────────────────
+async function loadScores() {
+  const res  = await fetch(`${API}/soc/threat-scores`, { headers });
+  const data = await res.json();
+
+  if (!data.length) {
+    document.getElementById('scores-list').innerHTML =
+      '<div class="empty-state"><i class="fas fa-chart-bar"></i>No threat data yet</div>';
+    return;
+  }
+
+  // Update top score stat
+  const top = data[0];
+  document.getElementById('stat-score').textContent      = top.score;
+  document.getElementById('stat-score-label').textContent = top.label;
+
+  document.getElementById('scores-list').innerHTML = data.map(s => {
+    const color = s.level === 'CRITICAL' ? '#ef4444'
+                : s.level === 'HIGH'     ? '#f97316'
+                : s.level === 'MEDIUM'   ? '#eab308'
+                : s.level === 'LOW'      ? '#3b82f6' : '#64748b';
+
+    const breakdown = Object.entries(s.breakdown || {}).map(([k, v]) =>
+      `<div class="score-item">${k}: <span>+${v}</span></div>`
+    ).join('');
+
+    return `
+      <div class="score-card">
+        <div class="score-header">
+          <div>
+            <div class="score-ip">${s.ip}</div>
+            <div class="score-label" style="color:${color};">${s.label}</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="score-num" style="color:${color};">${s.score}</div>
+            <div style="font-size:.7rem;color:var(--muted);">/ 100</div>
+          </div>
+        </div>
+        <div class="score-bar-wrap">
+          <div class="score-bar" style="width:${s.score}%;background:${color};"></div>
+        </div>
+        <div class="score-breakdown">${breakdown}</div>
+      </div>`;
+  }).join('');
+}
+
+// ── Timeline ──────────────────────────────────────────────────
+async function loadTimelineIps() {
+  const res  = await fetch(`${API}/soc/threat-scores`, { headers });
+  const data = await res.json();
+  const sel  = document.getElementById('timeline-ip-select');
+  const cur  = sel.value;
+  sel.innerHTML = '<option value="">— select an IP —</option>' +
+    data.map(s => `<option value="${s.ip}" ${s.ip===cur?'selected':''}>${s.ip} (score: ${s.score})</option>`).join('');
+  if (cur) loadTimeline();
+}
+
+async function loadTimeline() {
+  const ip = document.getElementById('timeline-ip-select').value;
+  if (!ip) return;
+
+  const res  = await fetch(`${API}/soc/timeline/${encodeURIComponent(ip)}`, { headers });
+  const data = await res.json();
+  const steps = data.steps || [];
+
+  if (!steps.length) {
+    document.getElementById('timeline-content').innerHTML =
+      '<div class="empty-state"><i class="fas fa-sitemap"></i>No events for this IP</div>';
+    return;
+  }
+
+  const html = `
+    <div style="margin-bottom:.8rem;font-size:.82rem;color:var(--muted);">
+      Attack chain for <span style="color:#60a5fa;font-family:monospace;">${ip}</span>
+       — ${steps.length} events recorded
+    </div>
+    <div class="timeline-wrap">
+      ${steps.map((s, i) => `
+        <div class="tl-step">
+          <div class="tl-dot tl-dot-${s.severity}"></div>
+          <div class="tl-time">${formatTime(s.time)}</div>
+          <div class="tl-label">${s.label}</div>
+          <div class="tl-desc">${s.desc}</div>
+        </div>
+        ${i < steps.length - 1 ? `<div class="tl-connector">${steps[i+1].label}</div>` : ''}
+      `).join('')}
+    </div>`;
+  document.getElementById('timeline-content').innerHTML = html;
+}
+
+// ── Response engine ───────────────────────────────────────────
+async function loadResponseIps() {
+  const res  = await fetch(`${API}/soc/threat-scores`, { headers });
+  const data = await res.json();
+  const sel  = document.getElementById('response-ip-select');
+  const cur  = sel.value;
+  sel.innerHTML = '<option value="">— select an IP —</option>' +
+    data.map(s => `<option value="${s.ip}" ${s.ip===cur?'selected':''}>${s.ip} (score: ${s.score})</option>`).join('');
+  if (cur) loadResponse();
+}
+
+async function loadResponse() {
+  const ip = document.getElementById('response-ip-select').value;
+  if (!ip) return;
+
+  const res   = await fetch(`${API}/soc/threat-score/${encodeURIComponent(ip)}`, { headers });
+  const score = await res.json();
+
+  const actions = [
+    { id:'block',   icon:'fa-ban',              iconBg:'#450a0a',  iconColor:'#fca5a5', name:'Block IP Address',        sub:'Add '+ip+' to firewall blocklist',          btnClass:'btn-block',  btnText:'Block Now' },
+    { id:'reset',   icon:'fa-key',              iconBg:'#422006',  iconColor:'#fdba74', name:'Force Password Reset',    sub:'Invalidate sessions for affected accounts', btnClass:'btn-reset',  btnText:'Force Reset' },
+    { id:'alert',   icon:'fa-bell',             iconBg:'#1e3a5f',  iconColor:'#93c5fd', name:'Alert Administrator',     sub:'Send incident report to security team',     btnClass:'btn-alert',  btnText:'Send Alert' },
+    { id:'lock',    icon:'fa-user-lock',        iconBg:'#3b0764',  iconColor:'#d8b4fe', name:'Lock Affected Accounts',  sub:'Suspend accounts accessed from this IP',    btnClass:'btn-lock',   btnText:'Lock Accounts' },
+  ];
+
+  const color = score.level === 'CRITICAL' ? '#ef4444'
+              : score.level === 'HIGH'     ? '#f97316'
+              : score.level === 'MEDIUM'   ? '#eab308' : '#3b82f6';
+
+  document.getElementById('response-content').innerHTML = `
+    <div class="response-card">
+      <div class="response-header">
+        <i class="fas fa-exclamation-triangle" style="color:${color};font-size:1.1rem;"></i>
+        <div>
+          <div class="rh-title">Threat Score: ${score.score} — ${score.label}</div>
+          <div class="rh-sub">IP: ${ip} · Recommended immediate actions below</div>
+        </div>
+      </div>
+      ${actions.map(a => `
+        <div class="action-item">
+          <div class="action-left">
+            <div class="action-icon" style="background:${a.iconBg};">
+              <i class="fas ${a.icon}" style="color:${a.iconColor};"></i>
+            </div>
+            <div>
+              <div class="action-name">${a.name}</div>
+              <div class="action-sub">${a.sub}</div>
+            </div>
+          </div>
+          <button class="btn-do ${a.btnClass}" id="btn-resp-${a.id}" onclick="doAction('${a.id}','${ip}',this)">
+            ${a.btnText}
+          </button>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function doAction(action, ip, btn) {
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    if (action === 'block') {
+      const res  = await fetch(`${API}/soc/block-ip`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ip })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        btn.className = 'btn-do btn-done';
+        btn.textContent = '✓ Blocked';
+        // Add visual indicator next to IP
+        const ipEl = document.querySelector(`[data-ip="${ip}"]`);
+        if (ipEl) ipEl.innerHTML += ' <span style="background:#450a0a;color:#fca5a5;font-size:.65rem;padding:.1rem .35rem;border-radius:3px;margin-left:.3rem;">BLOCKED</span>';
+      } else {
+        btn.textContent = 'Failed';
+      }
+    } else {
+      // Other actions — simulated for demo, log to console
+      await new Promise(r => setTimeout(r, 600)); // simulate network call
+      btn.className = 'btn-do btn-done';
+      btn.textContent = '✓ Done';
+      console.log(`[PhishWarden Response] Action: ${action} on IP: ${ip}`);
+    }
+  } catch (e) {
+    btn.textContent = 'Error';
+    console.error(e);
+  }
+}
+
+// ── Canary pings ──────────────────────────────────────────────
+async function loadCanary() {
+  const res  = await fetch(`${API}/soc/canary-pings`, { headers });
+  const data = await res.json();
+  document.getElementById('stat-canary').textContent = data.length;
+  if (!data.length) {
+    document.getElementById('canary-list').innerHTML =
+      '<div class="empty-state"><i class="fas fa-dove"></i>No canary pings yet</div>';
+    return;
+  }
+  document.getElementById('canary-list').innerHTML = data.map(p => `
+    <div class="ping-row">
+      <i class="fas fa-dove" style="color:#fdba74;"></i>
+      <span class="ping-ip">${p.attackerIp}</span>
+      <span class="ping-token">${p.canaryToken}</span>
+      <span class="ping-time">${formatTime(p.triggeredAt)}</span>
+    </div>`).join('');
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function friendlyType(t) {
+  return { HONEYTOKEN_LOGIN:'Honeytoken Triggered', BRUTE_FORCE:'Brute Force',
+           PHISHING_CRED_HARVEST:'Suspicious Login', CANARY_PING:'Canary Fired',
+           PRIVILEGE_ESCALATION:'Privilege Escalation' }[t] || t;
+}
+function formatTime(iso) {
+  return new Date(iso).toLocaleString('en-IN', { dateStyle:'short', timeStyle:'short' });
+}
+function logout() { localStorage.clear(); window.location.href = '/pages/login.html'; }
+
+// ── Init + auto-refresh ───────────────────────────────────────
+loadEvents();
+setInterval(loadEvents, 10000);
+</script>
+</body>
+</html>
