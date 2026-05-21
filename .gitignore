@@ -1,0 +1,58 @@
+# HELP FILE
+HELP.md
+
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# Keep nested target folders inside source if needed
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# =========================
+# STS / Eclipse
+# =========================
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache
+
+# =========================
+# IntelliJ IDEA
+# =========================
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# =========================
+# NetBeans
+# =========================
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# =========================
+# VS Code
+# =========================
+.vscode/
+
+# =========================
+# Logs
+# =========================
+*.log
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
