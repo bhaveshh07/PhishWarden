@@ -120,7 +120,7 @@ Any interaction triggers:
 
 This diagram demonstrates how phishing activity moves through the detection pipeline and generates live threat alerts.
 
-![Attack Flow](screenshots/attack-flow.png)
+![Attack Flow](screenshots/attack_flow.png)
 
 ---
 
@@ -190,13 +190,13 @@ The goal is to bring enterprise-grade deception security to:
 
 ## SOC Dashboard
 
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](screenshots/Soc-dashboard.png)
 
 ---
 
 ## Threat Detection Panel
 
-![Threat Detection](screenshots/threat.png)
+![Threat Detection](screenshots/alertsystem.png)
 
 ---
 
