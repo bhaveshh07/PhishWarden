@@ -281,16 +281,16 @@ mvn spring-boot:run
 
 ---
 
-# 🤝 Contributors
+## 🤝 Contributors
 
 This project was built through collaborative effort and shared vision.
 
-| Contributor | Role |
-|-------------|------|
-| Bhavesh Pahuja | Core Idea, Security Architecture |
-| Tanisha Soni | Database Design & Backend Development |
-| Kshitiz Tiwari | Frontend Development & SOC Dashboard |
-| Prashant Dubey | Testing & System Validation |
+| Contributor | GitHub | Role |
+|------------|---------|------|
+| Bhavesh Pahuja | — | Core Idea, Security Architecture |
+| Tanisha Soni | — | Database Design & Backend Development |
+| Kshitiz Tiwari | [@kshitiztiwari-in](https://github.com/kshitiztiwari-in) | Frontend Development & SOC Dashboard |
+| Prashant Dubey | — | Testing & System Validation |
 
 ---
 
